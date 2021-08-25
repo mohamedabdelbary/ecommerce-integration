@@ -1,0 +1,17 @@
+[package]
+name = "graphql"
+version = "0.1.0"
+authors = ["Mohamed Abdelbary <m.abdelbary@gmail.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[dependencies]
+graphql_client = { version = "0.8.0" }
+tokio = { version = "1", features = ["full", "time", "macros"] }
+tokio-threadpool = "0.1.18"
+tokio-core = "0.1.17"
+reqwest = { version = "0.11.3", features = ["blocking", "json"] }
+serde = { version = "1.0.126" }
+hyper = { version = "0.14.10" }
+base64 = { version = "0.13.0" }
+chrono = { version = "0.4.0" }

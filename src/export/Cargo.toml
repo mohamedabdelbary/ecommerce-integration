@@ -1,0 +1,15 @@
+[package]
+name = "export"
+version = "0.1.0"
+authors = ["Mohamed Abdelbary <mohamed.abdelbary@duedil.com>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+db = { path = "../db" }
+graphql = { path = "../graphql" }
+tokio = { version = "1", features = ["full", "time", "macros"] }
+tokio-threadpool = "0.1.18"
+tokio-core = "0.1.17"
+deadpool-postgres = "0.9.0"

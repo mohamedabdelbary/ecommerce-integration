@@ -1,0 +1,9 @@
+[package]
+name = "ecommerce-integration"
+version = "0.1.0"
+authors = ["Mohamed Abdelbary <mohamed.abdelbary@duedil.com>"]
+edition = "2018"
+
+
+[dependencies]
+
