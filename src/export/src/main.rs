@@ -3,7 +3,7 @@ use graphql::client::{Credentials, get_client};
 use graphql::fetchers::fetch_orders;
 use db::postgres::create_pool;
 use db::schema::create as create_schema;
-use export::postgres::export_orders;
+use export::postgres::{export_orders, max_orders_ts};
 
 #[tokio::main]
 async fn main() {
@@ -24,10 +24,8 @@ async fn main() {
     let client = get_client(&gql_creds);
     // TODO: Add a step to only export orders that haven't been exported before based on dates.
     //   This might require changing some DB types to timestamp types instead of varchar/text.
-    let orders = fetch_orders(&gql_host, &client).await.unwrap();
+    let max_order_ts = max_orders_ts(&db_schema, &pool).await;
+    println!("Starting GraphQL fetch from {}", &max_order_ts);
+    let orders = fetch_orders(&gql_host, &client, &max_order_ts).await.unwrap();
     export_orders(&db_schema, &orders, &pool).await.unwrap();
-
-    // for (idx, order) in orders.unwrap().iter().enumerate() {
-    //     println!("Order #{}", idx);
-    // }
 }

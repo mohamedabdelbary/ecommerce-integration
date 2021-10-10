@@ -1,16 +1,28 @@
-use crate::util::{chunks, wrap_with};
+use crate::util::{chunks, wrap_with, dt_to_string};
 use db::postgres::run_query;
 use deadpool_postgres::Pool;
 use deadpool_postgres::tokio_postgres::Error;
+use chrono::{DateTime, FixedOffset, Datelike, Timelike};
+
 use graphql::entities::Order;
 
 pub async fn export_orders(schema: &str, orders: &Vec<Order>, pool: &Pool) -> Result<(), Error> {
     for chunk in chunks(&orders, 20) {
         let stmt = orders_insert_stmt(&schema, &chunk);
-        println!("Statement: {}", stmt);
         run_query::<&str>(&stmt, vec![], &pool).await.unwrap();
     }
     Ok(())
+}
+
+pub async fn max_orders_ts(schema: &str, pool: &Pool) -> String {
+    max_ts(&schema, &pool).await
+}
+
+async fn max_ts(schema: &str, pool: &Pool) -> String {
+    let query = format!("SELECT max(created_at) as max_updated_at from {}.orders", schema);
+    let res = &run_query::<&str>(&query, vec![], &pool).await.unwrap()[0];
+    let dt: DateTime<chrono::offset::Utc> = res.get("max_updated_at");
+    dt_to_string(&dt)
 }
 
 fn orders_insert_stmt(schema: &str, orders: &Vec<Order>) -> String {
