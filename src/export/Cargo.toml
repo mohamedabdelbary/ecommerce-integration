@@ -13,3 +13,5 @@ tokio = { version = "1", features = ["full", "time", "macros"] }
 tokio-threadpool = "0.1.18"
 tokio-core = "0.1.17"
 deadpool-postgres = "0.9.0"
+chrono = "0.4.19"
+tokio-postgres = { version = "0.7.2", features = ["with-chrono-0_4"] }
