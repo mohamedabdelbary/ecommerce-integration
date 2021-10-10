@@ -65,12 +65,12 @@ pub fn values_sql_lists<T>(entites: &Vec<T>, row_mapper: &dyn Fn(&T) -> String) 
 fn order_sql_string(order: &Order) -> String {
     let single_quote = "'";
     vec![
-        wrap_with(order.name.as_str(), single_quote),
+        wrap_with(order.name.replace("'", "''").as_str(), single_quote),
         wrap_with(order.customer.id.as_str(), single_quote),
         wrap_with(order.created_at.as_str(), single_quote),
         wrap_with(order.updated_at.as_str(), single_quote),
-        wrap_with(order.shipping_address.line_1.as_str(), single_quote),
-        wrap_with(order.shipping_address.line_2.as_str(), single_quote),
+        wrap_with(order.shipping_address.line_1.replace("'", "''").as_str(), single_quote),
+        wrap_with(order.shipping_address.line_2.replace("'", "''").as_str(), single_quote),
         wrap_with(order.shipping_address.zip.as_str(), single_quote),
         wrap_with(order.fully_paid.to_string().as_str(), single_quote),
         wrap_with(order.can_mark_as_paid.to_string().as_str(), single_quote),
