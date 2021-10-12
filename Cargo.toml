@@ -5,5 +5,15 @@ authors = ["Mohamed Abdelbary <mohamed.abdelbary@duedil.com>"]
 edition = "2018"
 
 
-[dependencies]
+[workspace]
+members = [
+    "export",
+    "db",
+    "graphql"
+]
 
+[[bin]]
+name = "export"
+path = "export/src/main.rs"
+
+[dependencies]
