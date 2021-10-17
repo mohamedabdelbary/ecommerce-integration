@@ -100,9 +100,9 @@ fn extract_orders(gql_response: Response<orders_query::ResponseData>) -> Vec<Ord
                     created_at: order.created_at.to_string(),
                     updated_at: order.updated_at.to_string(),
                     shipping_address: Address {
-                        line_1: address.address1.as_ref().unwrap().to_string(),
-                        line_2: address.address2.as_ref().unwrap().to_string(),
-                        zip: address.zip.as_ref().unwrap().to_string()
+                        line_1: address.address1.as_ref().unwrap_or_else(|| &empty_str).to_string(),
+                        line_2: address.address2.as_ref().unwrap_or_else(|| &empty_str).to_string(),
+                        zip: address.zip.as_ref().unwrap_or_else(|| &empty_str).to_string()
                     },
                     fully_paid: order.fully_paid,
                     can_mark_as_paid: order.can_mark_as_paid,
