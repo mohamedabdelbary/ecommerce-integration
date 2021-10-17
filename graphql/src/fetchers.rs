@@ -98,11 +98,6 @@ pub async fn fetch_orders(host: &str, client: &reqwest::Client, start_ts: &Strin
     Ok(orders)
 }
 
-// pub async fn get_max_date_orders(db_schema: &str, pool: &Pool) -> String {
-//     // TODO: Continue
-//     String::from("")
-// }
-
 fn extract_orders(gql_response: Response<orders_query::ResponseData>) -> (Vec<Order>, usize) {
     let mut orders = Vec::<Order>::new();
     let mut invalid_order_records = 0;
