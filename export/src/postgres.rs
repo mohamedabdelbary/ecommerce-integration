@@ -71,7 +71,7 @@ fn order_sql_string(order: &Order) -> String {
         wrap_with(order.updated_at.as_str(), single_quote),
         wrap_with(order.shipping_address.line_1.replace("'", "''").as_str(), single_quote),
         wrap_with(order.shipping_address.line_2.replace("'", "''").as_str(), single_quote),
-        wrap_with(order.shipping_address.zip.as_str(), single_quote),
+        wrap_with(order.shipping_address.zip.replace("'", "''").as_str(), single_quote),
         wrap_with(order.fully_paid.to_string().as_str(), single_quote),
         wrap_with(order.can_mark_as_paid.to_string().as_str(), single_quote),
         wrap_with(order.current_total_price.amount.to_string().as_str(), single_quote),
