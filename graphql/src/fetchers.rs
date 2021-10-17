@@ -98,7 +98,7 @@ pub async fn fetch_orders(host: &str, client: &reqwest::Client, start_ts: &Strin
     Ok(orders)
 }
 
-fn extract_orders(gql_response: Response<orders_query::ResponseData>) -> (Vec<Order>, usize) {
+pub fn extract_orders(gql_response: Response<orders_query::ResponseData>) -> (Vec<Order>, usize) {
     let mut orders = Vec::<Order>::new();
     let mut invalid_order_records = 0;
     let empty_str = String::from("");

@@ -12,6 +12,7 @@ tokio-threadpool = "0.1.18"
 tokio-core = "0.1.17"
 reqwest = { version = "0.11.3", features = ["blocking", "json"] }
 serde = { version = "1.0.126" }
+serde_json = { version = "1.0.59" }
 hyper = { version = "0.14.10" }
 base64 = { version = "0.13.0" }
 chrono = { version = "0.4.0" }
