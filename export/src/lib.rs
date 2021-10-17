@@ -3,8 +3,10 @@ pub mod util;
 
 #[cfg(test)]
 mod tests {
-    use crate::util::{chunks, wrap_with};
+    use crate::util::{chunks, wrap_with, dt_to_string};
     use crate::postgres::values_sql_lists;
+    use chrono::prelude::*;
+    use chrono::Utc;
 
     #[test]
     fn test_chunks() {
@@ -40,5 +42,12 @@ mod tests {
         ];
         let values = values_sql_lists::<MockEntity>(&l, &mock_entities_string_combine);
         assert_eq!(values, String::from("(1,Avon Barksdale),(2,Jimmy Mcnulty),(3,Omar Little)"))
+    }
+
+    #[test]
+    fn test_dt_to_string() {
+        let dt = Utc.ymd(2021, 7, 8).and_hms(8, 10, 11); // `2021-07-08T08:10:11Z`
+        let dt_string = dt_to_string(&dt);
+        assert_eq!(dt_string, String::from("2021-07-08 08:10:11+00"));
     }
 }
