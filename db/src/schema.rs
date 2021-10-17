@@ -26,7 +26,7 @@ fn orders(schema_name: &str) -> String {
         updated_at                      timestamp,
         shipping_address_line_1         text,
         shipping_address_line_2         text,
-        shipping_address_zip            varchar(32),
+        shipping_address_zip            text,
         fully_paid                      bool,
         can_mark_as_paid                bool,
         current_total_price_amount      real,
