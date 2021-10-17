@@ -1,5 +1,3 @@
-![Rust](Rust_programming_language_black_logo.svg "Rust")
-
 ## Intro
 
 Simple tool for exporting data from a Shopify store to Postgresql using the Shopify GraphQL API.
