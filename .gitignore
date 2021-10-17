@@ -1,0 +1,10 @@
+Cargo.lock
+/.idea
+/*.iml
+/target
+*.swp
+/hs_err_pid*.log
+target/
+.python-version
+.vscode/
+
