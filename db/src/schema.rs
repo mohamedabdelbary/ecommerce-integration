@@ -38,6 +38,11 @@ fn orders(schema_name: &str) -> String {
     )", schema_name)
 }
 
+fn inventory(schema_name: &str) -> String {
+    // TODO: Complete
+    String::from("")
+}
+
 fn products(schema_name: &str) -> String {
     // TODO: Complete
     String::from("")
