@@ -2,7 +2,9 @@ use graphql_client::{GraphQLQuery, Response, QueryBody};
 use std::error::Error;
 use reqwest;
 use std::fmt::Debug;
+use std::{thread, time};
 use crate::entities::{Order, Customer, Address, MoneyAmount, CurrencyCode};
+use crate::error::GraphQLFetchError;
 
 type DateTime = String;
 type Decimal = String;
@@ -31,13 +33,30 @@ response_derives = "Debug,Serialize",
 )]
 pub struct OrdersQuery;
 
+const RETRIES: u32 = 5;
+const GQL_BATCH_SIZE: usize = 50;
 
 async fn run_query<T: GraphQLQuery>(host: &str, client: &reqwest::Client, query: &QueryBody<T::Variables>) -> Result<Response<T::ResponseData>, Box<dyn Error>>
     where T::ResponseData: Debug
 {
-    let res = client.post(host).json(&query).send().await?;
-    let response_body: Response<T::ResponseData> = res.json().await?;
-    Ok(response_body)
+    let mut attempt: u32 = 1;
+    let min_sleep_millis: u64 = 500;
+    // Need to support retries as GQL server will fail if hit at a high rate
+    while attempt <= RETRIES {
+        let res = client.post(host).json(&query).send().await?;
+        let response_body: Response<T::ResponseData> = res.json().await?;
+        match response_body.errors {
+            None => return Ok(response_body),
+            Some(_) => {
+                // Exponential Back-off
+                let sleep_millis = min_sleep_millis * u64::pow(2, attempt);
+                println!("GraphQL returned an error, sleeping {} seconds before retrying", (sleep_millis / 1000) as i32);
+                thread::sleep(time::Duration::from_millis(sleep_millis));
+                attempt += 1;
+            }
+        }
+    }
+    Err(Box::new(GraphQLFetchError()))
 }
 
 // pub async fn fetch_products(host: &str, client: &reqwest::Client) -> Result<(), Box<dyn Error>> {
@@ -58,25 +77,23 @@ pub async fn fetch_orders(host: &str, client: &reqwest::Client, start_ts: &Strin
         let filter = format!("created_at:>'{}'", start);
         println!("Updated filter to {}", filter);
         let variables = orders_query::Variables {
-            query_filter: filter
+            query_filter: filter,
+            batch_size: GQL_BATCH_SIZE as i64
         };
         let query: QueryBody<orders_query::Variables> = OrdersQuery::build_query(variables);
         let resp: Response<orders_query::ResponseData> = run_query::<OrdersQuery>(&host, &client, &query).await.unwrap();
-        let order_batch = extract_orders(resp);
-        // FIXME: This doesn't work as expected because GQL server most likely throttles after
-        //   a couple of requests and returns an error response, which extract_orders method would suppress
-        //   and just return an empty order_batch.
-        if order_batch.len() == 0 {
+        let (order_batch, invalid_order_records) = extract_orders(resp);
+        let batch_len = order_batch.len() + invalid_order_records;
+        println!("Length of order batch is {}", batch_len);
+        if batch_len < GQL_BATCH_SIZE {
             println!("Finished processing at {}", start);
             done = true;
         } else {
-            // orders are sorted by created_at so we know that latest timestamp will be that
-            // of the last order in the batch.
             start = order_batch[order_batch.len() - 1].clone().created_at.to_string();
-            println!("Length of order batch is {}", order_batch.len());
             println!("Updated start TS to {}", start);
-            orders.extend(order_batch);
         }
+        orders.extend(order_batch);
+
     }
     Ok(orders)
 }
@@ -86,13 +103,20 @@ pub async fn fetch_orders(host: &str, client: &reqwest::Client, start_ts: &Strin
 //     String::from("")
 // }
 
-fn extract_orders(gql_response: Response<orders_query::ResponseData>) -> Vec<Order> {
+fn extract_orders(gql_response: Response<orders_query::ResponseData>) -> (Vec<Order>, usize) {
     let mut orders = Vec::<Order>::new();
+    let mut invalid_order_records = 0;
+    let empty_str = String::from("");
     match gql_response.data {
-        None => orders,
+        None => (orders, invalid_order_records),
         Some(order_data) => {
             for o in order_data.orders.edges.iter() {
                 let order = &o.node;
+                // No customer or address happens on very rare occasions, when it does, we will skip the order.
+                if order.customer.as_ref().is_none() || order.shipping_address.as_ref().is_none() {
+                    invalid_order_records += 1;
+                    continue;
+                }
                 let address = order.shipping_address.as_ref().unwrap();
                 orders.push(Order {
                     name: order.name.to_string(),
@@ -120,7 +144,7 @@ fn extract_orders(gql_response: Response<orders_query::ResponseData>) -> Vec<Ord
                     }
                 })
             }
-            orders
+            (orders, invalid_order_records)
         }
     }
 

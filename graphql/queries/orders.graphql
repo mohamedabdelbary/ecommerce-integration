@@ -1,8 +1,8 @@
-query OrdersQuery($queryFilter: String!) {
+query OrdersQuery($queryFilter: String!, $batchSize: Int!) {
     shop {
         name
     }
-    orders(first: 50, query: $queryFilter, sortKey: CREATED_AT){
+    orders(first: $batchSize, query: $queryFilter, sortKey: CREATED_AT){
         edges{
             node{
                 name
