@@ -22,10 +22,16 @@ async fn main() {
     let gql_pass = std::env::var("GQL_API_PASS").expect("Must provide GraphQL API password");
     let gql_creds = Credentials::new( gql_user, gql_pass );
     let client = get_client(&gql_creds);
-    // TODO: Add a step to only export orders that haven't been exported before based on dates.
-    //   This might require changing some DB types to timestamp types instead of varchar/text.
     let max_order_ts = max_orders_ts(&db_schema, &pool).await;
     println!("Starting GraphQL fetch from {}", &max_order_ts);
+    // TODO: Change how these steps are performed so instead of
+    // - Fetch all orders
+    // - Export all orders to DB
+    // to instead
+    // - Fetch batch of orders
+    // - Export batch to DB
+    // - Do the next batch, etc
     let orders = fetch_orders(&gql_host, &client, &max_order_ts).await.unwrap();
+    println!("Fetched {} from GraphQL, starting export to DB", orders.len());
     export_orders(&db_schema, &orders, &pool).await.unwrap();
 }
