@@ -3,11 +3,12 @@ use std::error::Error;
 use reqwest;
 use std::fmt::Debug;
 use std::{thread, time};
-use crate::entities::{Order, Customer, Address, MoneyAmount, CurrencyCode};
+use crate::entities::{Order, Customer, Address, MoneyAmount, CurrencyCode, InventoryLevel, Entity};
 use crate::error::GraphQLFetchError;
 
 type DateTime = String;
 type Decimal = String;
+type Money = String;
 
 // #[derive(GraphQLQuery)]
 // #[graphql(
@@ -17,13 +18,6 @@ type Decimal = String;
 // )]
 // pub struct ProductsQuery;
 //
-// #[derive(GraphQLQuery)]
-// #[graphql(
-// schema_path = "schema.graphql",
-// query_path = "queries/customers.graphql",
-// response_derives = "Debug,Serialize",
-// )]
-// pub struct CustomersQuery;
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -33,11 +27,19 @@ response_derives = "Debug,Serialize",
 )]
 pub struct OrdersQuery;
 
+#[derive(GraphQLQuery)]
+#[graphql(
+schema_path = "schema.graphql",
+query_path = "queries/inventory.graphql",
+response_derives = "Debug,Serialize",
+)]
+pub struct InventoryQuery;
+
+
 const RETRIES: u32 = 5;
 const GQL_BATCH_SIZE: usize = 50;
 
 async fn run_query<T: GraphQLQuery>(host: &str, client: &reqwest::Client, query: &QueryBody<T::Variables>) -> Result<Response<T::ResponseData>, Box<dyn Error>>
-    where T::ResponseData: Debug
 {
     let mut attempt: u32 = 1;
     let min_sleep_millis: u64 = 500;
@@ -70,39 +72,63 @@ async fn run_query<T: GraphQLQuery>(host: &str, client: &reqwest::Client, query:
 // }
 
 pub async fn fetch_orders(host: &str, client: &reqwest::Client, start_ts: &String) -> Result<Vec<Order>, Box<dyn Error>> {
-    let mut orders = Vec::<Order>::new();
+    fetch_from_gql::<Order, OrdersQuery>(&host, &client, &start_ts, &orders_gql_query, &extract_orders).await
+}
+
+
+fn orders_gql_query(filter: String, batch_size: i64) -> QueryBody<orders_query::Variables> {
+    let variables = orders_query::Variables {
+        query_filter: filter,
+        batch_size: batch_size
+    };
+    OrdersQuery::build_query(variables)
+}
+
+
+// Generic function to run any GraphQL query with pagination and populate list of entities,
+// starting from start_ts timestamp.
+async fn fetch_from_gql<T, Q>
+    (
+        host: &str,
+        client: &reqwest::Client,
+        start_ts: &String, 
+        gql_query_fn: &dyn Fn(String, i64) -> QueryBody<Q::Variables>,
+        entity_extract_fn: &dyn for<'r> Fn(&'r Response<Q::ResponseData>) -> (Vec<T>, usize),
+    ) -> Result<Vec<T>, Box<dyn Error>>
+    where 
+        T: Clone + Entity,
+        Q: GraphQLQuery,
+{
+   
+    let mut entities = Vec::<T>::new();
     let mut done = false;
     let mut start = start_ts.clone();
     while !done {
         let filter = format!("created_at:>'{}'", start);
         println!("Updated filter to {}", filter);
-        let variables = orders_query::Variables {
-            query_filter: filter,
-            batch_size: GQL_BATCH_SIZE as i64
-        };
-        let query: QueryBody<orders_query::Variables> = OrdersQuery::build_query(variables);
-        let resp: Response<orders_query::ResponseData> = run_query::<OrdersQuery>(&host, &client, &query).await.unwrap();
-        let (order_batch, invalid_order_records) = extract_orders(resp);
-        let batch_len = order_batch.len() + invalid_order_records;
-        println!("Length of order batch is {}", batch_len);
+        let query: QueryBody<Q::Variables> = gql_query_fn(filter, GQL_BATCH_SIZE as i64);
+        let resp: Response<Q::ResponseData> = run_query::<Q>(&host, &client, &query).await.unwrap();
+        let (entity_batch, invalid_order_records) = entity_extract_fn(&resp);
+        let batch_len = entity_batch.len() + invalid_order_records;
+        println!("Length of batch is {}", batch_len);
         if batch_len < GQL_BATCH_SIZE {
             println!("Finished processing at {}", start);
             done = true;
         } else {
-            start = order_batch[order_batch.len() - 1].clone().created_at.to_string();
-            println!("Updated start TS to {}", start);
+            start = entity_batch[entity_batch.len() - 1].clone().created_at().to_string();
+            println!("Updated start timestamp to {}", start);
         }
-        orders.extend(order_batch);
-
+        entities.extend(entity_batch);
     }
-    Ok(orders)
+    Ok(entities)
 }
 
-pub fn extract_orders(gql_response: Response<orders_query::ResponseData>) -> (Vec<Order>, usize) {
+
+pub fn extract_orders<'r>(gql_response: &'r Response<orders_query::ResponseData>) -> (Vec<Order>, usize) {
     let mut orders = Vec::<Order>::new();
     let mut invalid_order_records = 0;
     let empty_str = String::from("");
-    match gql_response.data {
+    match &gql_response.data {
         None => (orders, invalid_order_records),
         Some(order_data) => {
             for o in order_data.orders.edges.iter() {
@@ -142,7 +168,6 @@ pub fn extract_orders(gql_response: Response<orders_query::ResponseData>) -> (Ve
             (orders, invalid_order_records)
         }
     }
-
 }
 
 fn currency_map(curr: &orders_query::CurrencyCode) -> CurrencyCode {

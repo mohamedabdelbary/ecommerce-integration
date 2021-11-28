@@ -1,5 +1,9 @@
 use core::fmt;
 
+pub trait Entity {
+    fn created_at(&self) -> &str;
+}
+
 #[derive(Debug,Clone)]
 pub struct Order {
     pub name: String,
@@ -13,6 +17,19 @@ pub struct Order {
     pub original_total_price: MoneyAmount,
     pub total_refund: MoneyAmount
 }
+
+macro_rules! impl_Entity {
+    (for $($e:ty),+) => {
+        $(impl Entity for $e {
+            fn created_at(&self) -> &str {
+                &self.created_at
+            }
+        })*
+    }
+}
+
+impl_Entity!(for Order, InventoryLevel);
+
 
 #[derive(Debug,Clone)]
 pub struct MoneyAmount {
@@ -45,3 +62,23 @@ pub struct Address {
     pub zip: String
 }
 
+#[derive(Debug,Clone)]
+pub struct InventoryLevel {
+    location: Location,
+    item: InventoryItem,
+    created_at: String
+}
+
+#[derive(Debug,Clone)]
+struct InventoryItem {
+    id: String,
+    display_name: String,
+    price: MoneyAmount,
+    quantity: i32
+}
+
+#[derive(Debug,Clone)]
+struct Location {
+    id: String,
+    name: String
+}
