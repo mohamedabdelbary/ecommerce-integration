@@ -1,0 +1,30 @@
+query InventoryQuery($queryFilter: String!, $batchSize: Int!) {
+  shop {
+    name
+  }
+  # There are < 10 locations in our case. If there are more, this query needs to be modified accordingly and support paginaton over locations.
+  locations(first: 10) {
+    edges{
+      node{
+        id
+        name
+        inventoryLevels(query: $queryFilter, first: $batchSize) {
+          edges {
+            node {
+              id
+              item {
+                id
+                variant {
+                  displayName
+                  price
+                  inventoryQuantity
+                }
+              }
+              createdAt
+            }
+          }
+      	}
+      }
+    }
+  }
+}
