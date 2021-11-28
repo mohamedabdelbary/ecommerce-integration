@@ -1,6 +1,6 @@
 #[cfg(test)]
 mod tests {
-    use crate::fetchers::{extract_orders, orders_query};
+    use crate::fetchers::{extract_orders, extract_inventory, orders_query, inventory_query};
     use serde_json::{from_value, json};
     use graphql_client::Response;
 
@@ -279,6 +279,113 @@ mod tests {
         )
     }
 
+    fn get_inventory_response() -> serde_json::Value {
+      json!(
+        {
+          "data": {
+            "shop": {
+              "name": "Frillu"
+            },
+            "locations": {
+              "edges": [
+                {
+                  "node": {
+                    "id": "gid://shopify/Location/304939036",
+                    "name": "Osman Ahmed Osman Bridge",
+                    "inventoryLevels": {
+                      "edges": [
+                        {
+                          "node": {
+                            "id": "gid://shopify/InventoryLevel/2237456?inventory_item_id=32808904851554",
+                            "item": {
+                              "id": "gid://shopify/InventoryItem/32808904851554",
+                              "variant": {
+                                "displayName": "Rocker Open Sweat Cardi - Default Title",
+                                "price": "700.00",
+                                "inventoryQuantity": 3
+                              }
+                            },
+                            "createdAt": "2020-02-11T17:53:33Z"
+                          }
+                        },
+                        {
+                          "node": {
+                            "id": "gid://shopify/InventoryLevel/2237456?inventory_item_id=32850182275170",
+                            "item": {
+                              "id": "gid://shopify/InventoryItem/32850182275170",
+                              "variant": {
+                                "displayName": "Olive Urban Fly Shirt - MEDIUM",
+                                "price": "500.00",
+                                "inventoryQuantity": 0
+                              }
+                            },
+                            "createdAt": "2020-02-22T18:30:50Z"
+                          }
+                        },
+                        {
+                          "node": {
+                            "id": "gid://shopify/InventoryLevel/2237456?inventory_item_id=32850182307938",
+                            "item": {
+                              "id": "gid://shopify/InventoryItem/32850182307938",
+                              "variant": {
+                                "displayName": "Olive Urban Fly Shirt - LARGE",
+                                "price": "500.00",
+                                "inventoryQuantity": 0
+                              }
+                            },
+                            "createdAt": "2020-02-22T18:30:50Z"
+                          }
+                        },
+                        {
+                          "node": {
+                            "id": "gid://shopify/InventoryLevel/2237456?inventory_item_id=32850182340706",
+                            "item": {
+                              "id": "gid://shopify/InventoryItem/32850182340706",
+                              "variant": {
+                                "displayName": "Olive Urban Fly Shirt - X-LARGE",
+                                "price": "500.00",
+                                "inventoryQuantity": 0
+                              }
+                            },
+                            "createdAt": "2020-02-22T18:30:50Z"
+                          }
+                        },
+                        {
+                          "node": {
+                            "id": "gid://shopify/InventoryLevel/2237456?inventory_item_id=32850189877346",
+                            "item": {
+                              "id": "gid://shopify/InventoryItem/32850189877346",
+                              "variant": {
+                                "displayName": "Purple Urban Fly Shirt - MEDIUM",
+                                "price": "500.00",
+                                "inventoryQuantity": 9
+                              }
+                            },
+                            "createdAt": "2020-02-22T18:36:13Z"
+                          }
+                        }
+                      ]
+                    }
+                  }
+                }
+              ]
+            }
+          },
+          "extensions": {
+            "cost": {
+              "requestedQueryCost": 21,
+              "actualQueryCost": 21,
+              "throttleStatus": {
+                "maximumAvailable": 1000,
+                "currentlyAvailable": 979,
+                "restoreRate": 50
+              }
+            }
+          }
+        }
+      )
+    }
+
     #[test]
     fn test_parse_gql_orders_response() {
         let resp: Response<orders_query::ResponseData> = from_value(get_orders_response()).unwrap();
@@ -288,5 +395,16 @@ mod tests {
         // Even though response contains 7 records, one has no shipping address and another has no customer info,
         // so they're treated as invalid records.
         assert_eq!(orders_vec.len(), 5);
+    }
+
+    #[test]
+    fn test_parse_gql_inventory_response() {
+      let resp: Response<inventory_query::ResponseData> = from_value(get_inventory_response()).unwrap();
+        let (inventory_vec, _) = extract_inventory(&resp);
+        assert_eq!(inventory_vec.len(), 5);
+        assert_eq!(inventory_vec[0].item.quantity, 3);
+        assert_eq!(inventory_vec[0].item.id, String::from("gid://shopify/InventoryItem/32808904851554"));
+        assert_eq!(inventory_vec[inventory_vec.len() - 1].item.display_name, String::from("Purple Urban Fly Shirt - MEDIUM"));
+        assert_eq!(inventory_vec[inventory_vec.len() - 1].item.price.amount, 500 as f32);
     }
 }
