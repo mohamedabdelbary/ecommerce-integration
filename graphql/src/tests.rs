@@ -282,7 +282,7 @@ mod tests {
     #[test]
     fn test_parse_gql_orders_response() {
         let resp: Response<orders_query::ResponseData> = from_value(get_orders_response()).unwrap();
-        let (orders_vec, invalid) = extract_orders(resp);
+        let (orders_vec, invalid) = extract_orders(&resp);
         // One record without shipping address, another without customer.
         assert_eq!(invalid, 2);
         // Even though response contains 7 records, one has no shipping address and another has no customer info,
