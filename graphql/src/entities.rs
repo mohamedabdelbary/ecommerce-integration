@@ -64,21 +64,21 @@ pub struct Address {
 
 #[derive(Debug,Clone)]
 pub struct InventoryLevel {
-    location: Location,
-    item: InventoryItem,
-    created_at: String
+    pub location: Location,
+    pub item: InventoryItem,
+    pub created_at: String
 }
 
 #[derive(Debug,Clone)]
-struct InventoryItem {
-    id: String,
-    display_name: String,
-    price: MoneyAmount,
-    quantity: i32
+pub struct InventoryItem {
+    pub id: String,
+    pub display_name: String,
+    pub price: MoneyAmount,
+    pub quantity: i32
 }
 
 #[derive(Debug,Clone)]
-struct Location {
-    id: String,
-    name: String
+pub struct Location {
+    pub id: String,
+    pub name: String
 }

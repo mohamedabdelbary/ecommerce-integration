@@ -2,7 +2,7 @@ use graphql_client::{GraphQLQuery, Response, QueryBody};
 use std::error::Error;
 use reqwest;
 use std::{thread, time};
-use crate::entities::{Order, Customer, Address, MoneyAmount, CurrencyCode, InventoryLevel, Entity};
+use crate::entities::{Order, Customer, Address, MoneyAmount, CurrencyCode, InventoryLevel, Entity, Location, InventoryItem};
 use crate::error::GraphQLFetchError;
 
 type DateTime = String;
@@ -58,12 +58,25 @@ pub async fn fetch_orders(host: &str, client: &reqwest::Client, start_ts: &Strin
 }
 
 
+pub async fn fetch_inventory(host: &str, client: &reqwest::Client, start_ts: &String) -> Result<Vec<InventoryLevel>, Box<dyn Error>> {
+    fetch_from_gql::<InventoryLevel, InventoryQuery>(&host, &client, &start_ts, &inventory_gql_query, &extract_inventory).await
+}
+
+
 fn orders_gql_query(filter: String, batch_size: i64) -> QueryBody<orders_query::Variables> {
     let variables = orders_query::Variables {
         query_filter: filter,
         batch_size: batch_size
     };
     OrdersQuery::build_query(variables)
+}
+
+fn inventory_gql_query(filter: String, batch_size: i64) -> QueryBody<inventory_query::Variables> {
+    let variables = inventory_query::Variables {
+        query_filter: filter,
+        batch_size: batch_size
+    };
+    InventoryQuery::build_query(variables)
 }
 
 
@@ -148,6 +161,37 @@ pub fn extract_orders<'r>(gql_response: &'r Response<orders_query::ResponseData>
                 })
             }
             (orders, invalid_order_records)
+        }
+    }
+}
+
+pub fn extract_inventory<'r>(gql_response: &'r Response<inventory_query::ResponseData>) -> (Vec<InventoryLevel>, usize) {
+    let mut inventories = Vec::<InventoryLevel>::new();
+    let mut invalid_inventory_records = 0;
+    match &gql_response.data {
+        None => (inventories, invalid_inventory_records),
+        Some(inventory_data) => {
+            // We only have one location
+            let location = &inventory_data.locations.edges[0].node;
+            for il in location.inventory_levels.edges.iter() {
+                let inv_level = &il.node;
+                inventories.push(InventoryLevel {
+                    location: Location { id: String::from(&location.id), name: String::from(&location.name) },
+                    item: InventoryItem {
+                        id: String::from(&inv_level.item.id),
+                        display_name: String::from(&inv_level.item.variant.display_name),
+                        price: MoneyAmount {
+                            amount: inv_level.item.variant.price.parse::<f32>().unwrap(),
+                            // We don't have currency info for inventory so defaulting to EGP.
+                            // TODO: Revisit this and see if you can do something better.
+                            currency: CurrencyCode::EGP
+                        },
+                        quantity: inv_level.item.variant.inventory_quantity.unwrap() as i32
+                    },
+                    created_at: String::from(&inv_level.created_at)
+                });
+            }
+            (inventories, invalid_inventory_records)
         }
     }
 }
