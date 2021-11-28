@@ -2,8 +2,13 @@ query InventoryQuery($queryFilter: String!, $batchSize: Int!) {
   shop {
     name
   }
-  # There are < 10 locations in our case. If there are more, this query needs to be modified accordingly and support paginaton over locations.
-  locations(first: 10) {
+  # We only have 1 location in our case. If there are more than one,
+  # we would need another query to fetch all locations, and then work
+  # through each location by passing a filter on location name, process
+  # each location, then move on to the next by changing the filter. In
+  # our case we don't need any of that because we have 1 location, so we
+  # can just pick the first.
+  locations(first: 1) {
     edges{
       node{
         id
