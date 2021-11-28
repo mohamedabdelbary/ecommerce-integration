@@ -1,7 +1,6 @@
 use graphql_client::{GraphQLQuery, Response, QueryBody};
 use std::error::Error;
 use reqwest;
-use std::fmt::Debug;
 use std::{thread, time};
 use crate::entities::{Order, Customer, Address, MoneyAmount, CurrencyCode, InventoryLevel, Entity};
 use crate::error::GraphQLFetchError;
@@ -10,14 +9,6 @@ type DateTime = String;
 type Decimal = String;
 type Money = String;
 
-// #[derive(GraphQLQuery)]
-// #[graphql(
-// schema_path = "schema.graphql",
-// query_path = "queries/products.graphql",
-// response_derives = "Debug,Serialize",
-// )]
-// pub struct ProductsQuery;
-//
 
 #[derive(GraphQLQuery)]
 #[graphql(
@@ -61,15 +52,6 @@ async fn run_query<T: GraphQLQuery>(host: &str, client: &reqwest::Client, query:
     Err(Box::new(GraphQLFetchError()))
 }
 
-// pub async fn fetch_products(host: &str, client: &reqwest::Client) -> Result<(), Box<dyn Error>> {
-//     let resp = run_query(&host, &client, products_query);
-//     // TODO: Parse products
-// }
-//
-// pub async fn fetch_customers(host: &str, client: &reqwest::Client) -> Result<(), Box<dyn Error>> {
-//     let resp = run_query(&host, &client, customers_query);
-//     // TODO: Parse customers
-// }
 
 pub async fn fetch_orders(host: &str, client: &reqwest::Client, start_ts: &String) -> Result<Vec<Order>, Box<dyn Error>> {
     fetch_from_gql::<Order, OrdersQuery>(&host, &client, &start_ts, &orders_gql_query, &extract_orders).await
