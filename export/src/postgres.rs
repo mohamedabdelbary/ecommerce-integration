@@ -4,14 +4,34 @@ use deadpool_postgres::Pool;
 use deadpool_postgres::tokio_postgres::Error;
 use chrono::{DateTime, FixedOffset, Datelike, Timelike};
 
-use graphql::entities::Order;
+use graphql::entities::{Order, InventoryLevel, Entity};
 
-pub async fn export_orders(schema: &str, orders: &Vec<Order>, pool: &Pool) -> Result<(), Error> {
-    for chunk in chunks(&orders, 20) {
-        let stmt = orders_insert_stmt(&schema, &chunk);
+const DEFAULT_START_TS: &str = "2020-01-01 00:00:00+00";
+
+
+pub async fn export_entities<T>
+    (
+        schema: &str,
+        entities: &Vec<T>,
+        entity_insert_sql: &dyn Fn(&str, &Vec<T>) -> String,
+        pool: &Pool
+    ) -> Result<(), Error>
+    where
+        T: Entity + Clone
+{
+    for chunk in chunks(&entities, 20) {
+        let stmt = entity_insert_sql(&schema, &chunk);
         run_query::<&str>(&stmt, vec![], &pool).await.unwrap();
     }
     Ok(())
+}
+
+pub async fn export_orders(schema: &str, orders: &Vec<Order>, pool: &Pool) -> Result<(), Error> {
+    export_entities::<Order>(schema, orders, &orders_insert_stmt, pool).await
+}
+
+pub async fn export_inventory_levels(schema: &str, inv_levels: &Vec<InventoryLevel>, pool: &Pool) -> Result<(), Error> {
+    export_entities::<InventoryLevel>(schema, inv_levels, &inventory_level_insert_stmt, pool).await
 }
 
 pub async fn max_orders_ts(schema: &str, pool: &Pool) -> String {
