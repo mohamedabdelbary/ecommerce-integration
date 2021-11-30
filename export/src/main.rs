@@ -1,9 +1,9 @@
 use tokio;
 use graphql::client::{Credentials, get_client};
-use graphql::fetchers::fetch_orders;
+use graphql::fetchers::{fetch_orders, fetch_inventory};
 use db::postgres::create_pool;
 use db::schema::create as create_schema;
-use export::postgres::{export_orders, max_orders_ts};
+use export::postgres::{export_orders, export_inventory_levels, max_orders_ts, max_inventory_ts};
 
 #[tokio::main]
 async fn main() {
@@ -23,15 +23,18 @@ async fn main() {
     let gql_creds = Credentials::new( gql_user, gql_pass );
     let client = get_client(&gql_creds);
     let max_order_ts = max_orders_ts(&db_schema, &pool).await;
-    println!("Starting GraphQL fetch from {}", &max_order_ts);
-    // TODO: Change how these steps are performed so instead of
-    // - Fetch all orders
-    // - Export all orders to DB
-    // to instead
-    // - Fetch batch of orders
-    // - Export batch to DB
-    // - Do the next batch, etc
+    println!("Starting GraphQL Order fetch from {}", &max_order_ts);
     let orders = fetch_orders(&gql_host, &client, &max_order_ts).await.unwrap();
-    println!("Fetched {} from GraphQL, starting export to DB", orders.len());
+    println!("Fetched {} orders from GraphQL, starting export to DB", orders.len());
     export_orders(&db_schema, &orders, &pool).await.unwrap();
+    println!("Exported orders to PG..");
+    println!("====================");
+
+    let max_inv_ts = max_inventory_ts(&db_schema, &pool).await;
+    println!("Starting GraphQL Inventory fetch from {}", &max_inv_ts);
+    let inv_levels = fetch_inventory(&gql_host, &client, &max_inv_ts).await.unwrap();
+    println!("Fetched {} inventory levels from GraphQL, starting export to DB", inv_levels.len());
+    export_inventory_levels(&db_schema, &inv_levels, &pool).await.unwrap();
+    println!("Exported inventory levels to PG..");
+    println!("Done!")
 }

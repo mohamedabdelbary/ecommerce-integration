@@ -77,6 +77,23 @@ fn orders_insert_stmt(schema: &str, orders: &Vec<Order>) -> String {
     )
 }
 
+fn inventory_level_insert_stmt(schema: &str, inv_levels: &Vec<InventoryLevel>) -> String {
+    format!(
+        "INSERT INTO {}.inventory_level (
+            item_id,
+            display_name,
+            location_id,
+            price,
+            currency,
+            quantity,
+            created_at
+          )
+          VALUES {}",
+        schema,
+        values_sql_lists::<InventoryLevel>(&inv_levels, &inventory_level_sql_string)
+    )
+}
+
 pub fn values_sql_lists<T>(entites: &Vec<T>, row_mapper: &dyn Fn(&T) -> String) -> String {
     let mut values = String::from("");
     for (i, entity) in entites.iter().enumerate() {
@@ -107,5 +124,18 @@ fn order_sql_string(order: &Order) -> String {
         wrap_with(order.original_total_price.currency.to_string().as_str(), single_quote),
         wrap_with(order.total_refund.amount.to_string().as_str(), single_quote),
         wrap_with(order.total_refund.currency.to_string().as_str(), single_quote)
+    ].join(",").to_string()
+}
+
+fn inventory_level_sql_string(inv: &InventoryLevel) -> String {
+    let single_quote = "'";
+    vec![
+        wrap_with(inv.item.id.as_str(), single_quote),
+        wrap_with(inv.item.display_name.as_str(), single_quote),
+        wrap_with(inv.location.id.as_str(), single_quote),
+        wrap_with(inv.item.price.amount.to_string().as_str(), single_quote),
+        wrap_with(inv.item.price.currency.to_string().as_str(), single_quote),
+        wrap_with(inv.item.quantity.to_string().as_str(), single_quote),
+        wrap_with(inv.created_at.as_str(), single_quote),
     ].join(",").to_string()
 }
