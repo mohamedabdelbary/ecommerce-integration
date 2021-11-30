@@ -35,14 +35,21 @@ pub async fn export_inventory_levels(schema: &str, inv_levels: &Vec<InventoryLev
 }
 
 pub async fn max_orders_ts(schema: &str, pool: &Pool) -> String {
-    max_ts(&schema, &pool).await
+    max_ts(schema, "orders", "created_at", pool).await
 }
 
-async fn max_ts(schema: &str, pool: &Pool) -> String {
-    let query = format!("SELECT max(created_at) as max_updated_at from {}.orders", schema);
-    let res = &run_query::<&str>(&query, vec![], &pool).await.unwrap()[0];
-    let dt: DateTime<chrono::offset::Utc> = res.get("max_updated_at");
-    dt_to_string(&dt)
+pub async fn max_inventory_ts(schema: &str, pool: &Pool) -> String {
+    max_ts(schema, "inventory_level", "created_at", pool).await
+}
+
+async fn max_ts(schema: &str, table: &str, ts_col: &str, pool: &Pool) -> String {
+    let query = format!("SELECT max({}) as max_updated_at from {}.{}", ts_col, schema, table);
+    let res = &run_query::<&str>(&query, vec![], &pool).await.unwrap();
+    let rec = &res[0];
+    match rec.get(0) {
+        None => String::from(DEFAULT_START_TS),
+        Some(dt) => dt_to_string(&dt)
+    }
 }
 
 fn orders_insert_stmt(schema: &str, orders: &Vec<Order>) -> String {
