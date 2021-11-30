@@ -12,9 +12,18 @@ pub async fn create(schema_name: &str, pool: &Pool) {
 fn table_statements(schema_name: &str) -> Vec<String> {
     vec![
         orders(&schema_name),
+        locations(&schema_name),
+        inventory_level(&schema_name),
         products(&schema_name),
         customers(&schema_name)
     ]
+}
+
+fn locations(schema_name: &str) -> String {
+    format!("CREATE TABLE IF NOT EXISTS {}.locations (
+        id                              varchar(256) primary key,
+        name                            varchar(512)
+    )", schema_name)
 }
 
 fn orders(schema_name: &str) -> String {
@@ -22,8 +31,8 @@ fn orders(schema_name: &str) -> String {
         id                              serial primary key,
         name                            varchar(512),
         customer_id                     varchar(512),
-        created_at                      timestamp,
-        updated_at                      timestamp,
+        created_at                      timestamp with time zone,
+        updated_at                      timestamp with time zone,
         shipping_address_line_1         text,
         shipping_address_line_2         text,
         shipping_address_zip            text,
@@ -38,9 +47,22 @@ fn orders(schema_name: &str) -> String {
     )", schema_name)
 }
 
-fn inventory(schema_name: &str) -> String {
-    // TODO: Complete
-    String::from("")
+fn inventory_level(schema_name: &str) -> String {
+    format!("CREATE TABLE IF NOT EXISTS {}.inventory_level (
+        id                                   serial primary key,
+        item_id                              varchar(256),
+        display_name                         text,
+        location_id                          varchar(256),
+        price                                real,
+        currency                             varchar(5),
+        quantity                             int,
+        created_at                           timestamp with time zone,
+
+        CONSTRAINT fk_location
+            FOREIGN KEY(location_id)
+	        REFERENCES {}.locations(id)
+	        ON DELETE CASCADE
+    )", schema_name, schema_name)
 }
 
 fn products(schema_name: &str) -> String {
